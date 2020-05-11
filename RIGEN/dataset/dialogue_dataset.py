@@ -42,7 +42,7 @@ class DialogueDataset(torch.utils.data.Dataset):
 
         if tokenize_fn is None:
             tokenizer = ElectraTokenizer.from_pretrained('monologg/koelectra-small-discriminator')
-            self.tokenize_fn = tokernizer.convert_tokens_to_ids
+            self.tokenize_fn = tokenizer.convert_tokens_to_ids
         else:
             self.tokenize_fn = tokenize_fn
 

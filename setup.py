@@ -5,7 +5,7 @@ with open("requirements.txt") as f:
 
 setup(
     name="RIGEN",
-    version="0.2",
+    version="0.1",
     description="Response Interactive GENeration model",
     author="Cheesama",
     install_requires=[],
