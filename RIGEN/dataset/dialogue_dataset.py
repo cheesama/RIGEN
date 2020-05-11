@@ -19,7 +19,7 @@ class DialogueDataset(torch.utils.data.Dataset):
 
     Output:
         source_tensors: Tensor([[tokens of '안녕하세요', SEP, ... ],]) 
-        target_tensors: One windows left shifted Tensor([[..., CLS],])
+        target_tensors: One windows left shifted Tensor([[..., EOS(CLS)],])
     """
     def __init__(self, file_path, session_col, text_col, sep_token_id=3, eos_token_id=2, sep=',', tokenize_fn=None):
         """
@@ -39,7 +39,6 @@ class DialogueDataset(torch.utils.data.Dataset):
 
         self.source = []
         self.target = []
-        
 
         if tokenize_fn is None:
             tokenizer = ElectraTokenizer.from_pretrained('monologg/koelectra-small-discriminator')
@@ -57,6 +56,14 @@ class DialogueDataset(torch.utils.data.Dataset):
 
             self.source.append(dialog_tokens[:-1])
             self.target.append(dialog_tokens[1:-1] + [self.eos_token_id])
+
+    def __getitem__(self, idx):
+        return torch.tensor([self.source[idx]]), torch.tensor([self.target[idx]])
+
+    def __len__(self):
+        return len(self.source)
+
+
 
                 
                 
