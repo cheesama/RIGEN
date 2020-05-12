@@ -70,14 +70,9 @@ class ResponseInteractiveGenerator(pl.LightningModule):
             f"{self.optimizer}(self.parameters(), lr={self.optimizer_lr})"
         )
 
-        return (
-            [optimizer,],
-            [
-                ReduceLROnPlateau(optimizer, patience=1),
-            ],
-        )
+        return optimizer, ReduceLROnPlateau(optimizer, patience=1)
 
-    def training_step(self, batch, batch_idx, optimizer_idx):
+    def training_step(self, batch, batch_idx):
         self.model.train()
 
         source, target = batch
