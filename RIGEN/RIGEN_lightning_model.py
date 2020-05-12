@@ -26,35 +26,25 @@ class ResponseInteractiveGenerator(pl.LightningModule):
 
         self.hparams = hparams
 
-        if hasattr(self.hparams, 'tokenizer'):
-            self.dataset = RasaIntentEntityDataset(markdown_lines=self.hparams.nlu_data, tokenizer=self.hparams.tokenizer)
-        else:
-            self.dataset = RasaIntentEntityDataset(markdown_lines=self.hparams.nlu_data, tokenizer=None)
+        self.model = DialogueTransformer(vocab_size=self.hparams.vocab_size)
 
-        self.model = EmbeddingTransformer(
-            vocab_size=self.dataset.get_vocab_size(),
-            seq_len=self.dataset.get_seq_len(),
-            intent_class_num=len(self.dataset.get_intent_idx()),
-            entity_class_num=len(self.dataset.get_entity_idx()),
-            num_encoder_layers=self.hparams.num_encoder_layers,
-        )
-
-        self.train_ratio = self.hparams.train_ratio
-        self.batch_size = self.hparams.batch_size
+        self.batch_size = 1
         self.optimizer = self.hparams.optimizer
-        self.intent_optimizer_lr = self.hparams.intent_optimizer_lr
-        self.entity_optimizer_lr = self.hparams.entity_optimizer_lr
+        self.optimizer_lr = self.hparams.optimizer_lr
         self.loss_fn = nn.CrossEntropyLoss()
 
     def forward(self, x):
         return self.model(x)
 
     def prepare_data(self):
-        train_length = int(len(self.dataset) * self.train_ratio)
+        file_list = []
+        for root, dir, files in os.walk(self.hparams.file_path):
+            for each_file in files:
+                file_list.append(root + os.sep + each_file)
+        file_list = sorted(file_list, key=lambda t:os.stat(t).st_mtime)
 
-        self.train_dataset, self.val_dataset = random_split(
-            self.dataset, [train_length, len(self.dataset) - train_length],
-        )
+        self.train_dataset = DialogueDataset(file_path=file_list[self.current_epoch], session_col='ho_idnt_num', text_col='text', tokenize_fn=self.hparams.tokenize_fn)
+        self.val_dataset = DialogueDataset(file_path=file_list[self.current_epoch+1], session_col='ho_idnt_num', text_col='text', tokenize_fn=self.hparams.tokenize_fn)
 
     def train_dataloader(self):
         train_loader = DataLoader(
@@ -73,93 +63,70 @@ class ResponseInteractiveGenerator(pl.LightningModule):
         return val_loader
 
     def configure_optimizers(self):
-        intent_optimizer = eval(
-            f"{self.optimizer}(self.parameters(), lr={self.intent_optimizer_lr})"
-        )
-        entity_optimizer = eval(
-            f"{self.optimizer}(self.parameters(), lr={self.entity_optimizer_lr})"
+        optimizer = eval(
+            f"{self.optimizer}(self.parameters(), lr={self.optimizer_lr})"
         )
 
         return (
-            [intent_optimizer, entity_optimizer],
-            # [StepLR(intent_optimizer, step_size=1),StepLR(entity_optimizer, step_size=1),],
+            [intent_optimizer,],
             [
                 ReduceLROnPlateau(intent_optimizer, patience=1),
-                ReduceLROnPlateau(entity_optimizer, patience=1),
             ],
         )
 
     def training_step(self, batch, batch_idx, optimizer_idx):
         self.model.train()
 
-        tokens, intent_idx, entity_idx = batch
+        source, target = batch
 
-        intent_pred, entity_pred = self.forward(tokens)
+        pred = self.forward(tokens)
 
-        intent_acc = get_accuracy(intent_idx.cpu(), intent_pred.max(1)[1].cpu())[0]
-        entity_acc = get_token_accuracy(
-            entity_idx.cpu(),
-            entity_pred.max(2)[1].cpu(),
-            ignore_index=self.dataset.pad_token_id,
+        acc = get_token_accuracy(
+            target.cpu(),
+            pred.max(2)[1].cpu(),
         )[0]
 
         tensorboard_logs = {
-            "train/intent/acc": intent_acc,
-            "train/entity/acc": entity_acc,
+            "train/acc": acc,
         }
 
-        if optimizer_idx == 0:
-            intent_loss = self.loss_fn(intent_pred, intent_idx.squeeze(1))
-            tensorboard_logs["train/intent/loss"] = intent_loss
-            return {
-                "loss": intent_loss,
-                "log": tensorboard_logs,
-            }
-        if optimizer_idx == 1:
-            entity_loss = self.loss_fn(entity_pred.transpose(1, 2), entity_idx.long())
-            tensorboard_logs["train/entity/loss"] = entity_loss
-            return {
-                "loss": entity_loss,
-                "log": tensorboard_logs,
-            }
+        loss = self.loss_fn(pred.transpose(1, 2), target.long())
+        tensorboard_logs["train/loss"] = _loss
+        return {
+            "loss": loss,
+            "log": tensorboard_logs,
+        }
 
     def validation_step(self, batch, batch_idx):
         self.model.eval()
 
-        tokens, intent_idx, entity_idx = batch
+        source, target = batch
 
-        intent_pred, entity_pred = self.forward(tokens)
+        pred = self.forward(source)
 
-        intent_acc = get_accuracy(intent_idx.cpu(), intent_pred.max(1)[1].cpu())[0]
-        entity_acc = get_token_accuracy(
-            entity_idx.cpu(),
-            entity_pred.max(2)[1].cpu(),
-            ignore_index=self.dataset.pad_token_id,
+        acc = get_token_accuracy(
+            target.cpu(),
+            pred.max(2)[1].cpu(),
         )[0]
 
-        intent_loss = self.loss_fn(intent_pred, intent_idx.squeeze(1))
-        entity_loss = self.loss_fn(
-            entity_pred.transpose(1, 2), entity_idx.long()
-        )  # , ignore_index=0)
+        loss = self.loss_fn(pred.transpose(1, 2), target.long())
 
         return {
-            "val_intent_acc": torch.Tensor([intent_acc]),
-            "val_entity_acc": torch.Tensor([entity_acc]),
-            "val_intent_loss": intent_loss,
-            "val_entity_loss": entity_loss,
-            "val_loss": intent_loss + entity_loss,
+            "val_acc": acc,
+            "val_loss": loss,
         }
 
     def validation_end(self, outputs):
         avg_loss = torch.stack([x["val_loss"] for x in outputs]).mean()
-        avg_intent_acc = torch.stack([x["val_intent_acc"] for x in outputs]).mean()
-        avg_entity_acc = torch.stack([x["val_entity_acc"] for x in outputs]).mean()
+        avg_acc = torch.stack([x["val_acc"] for x in outputs]).mean()
 
         tensorboard_logs = {
             "val/loss": avg_loss,
-            "val/intent_acc": avg_intent_acc,
-            "val/entity_acc": avg_entity_acc,
+            "val/acc": avg_acc,
         }
+
+        print ('### preparing next dataset ###')
+        self.prepare_data()
 
         return {
             "val_loss": avg_loss,
