@@ -21,7 +21,7 @@ class DialogueDataset(torch.utils.data.Dataset):
         source_tensors: Tensor([[tokens of '안녕하세요', SEP, ... ],]) 
         target_tensors: One windows left shifted Tensor([[..., EOS(CLS)],])
     """
-    def __init__(self, file_path, session_col, text_col, sep_token_id=3, eos_token_id=2, sep=',', tokenize_fn=None):
+    def __init__(self, file_path, session_col, text_col, sep_token_id=3, eos_token_id=2, sep='\t', tokenize_fn=None):
         """
         file_path       : dialogue file path
         session_col     : session indicated column name
@@ -32,7 +32,7 @@ class DialogueDataset(torch.utils.data.Dataset):
         sep             : delimiter of data file(default: ',')
         tokenizer_fn    : tokenizer func(default: None(using KoELECTRA tokenizer))
         """
-        df = pd.read_csv(file_path, delimiter=sep, encoding='utf-8')
+        df = pd.read_csv(file_path, delimiter=sep, usecols=[session_col, text_col], encoding='utf-8')
 
         self.sep_token_id = sep_token_id
         self.eos_token_id = eos_token_id
@@ -46,19 +46,19 @@ class DialogueDataset(torch.utils.data.Dataset):
         else:
             self.tokenize_fn = tokenize_fn
 
-        for name, group in tqdm(df.groupby(session_col), desc='generating session token dataset ...'):
+        for name, group in tqdm(df.groupby(session_col), desc=f'generating session token dataset -> {file_path}'):
             dialog = list(group[text_col])
             dialog_tokens = []
 
             for utterance in dialog:
-                dialog_tokens += self.tokenize_fn(utterance)
+                dialog_tokens += self.tokenize_fn(str(utterance))
                 dialog_tokens += [self.sep_token_id]
 
             self.source.append(dialog_tokens[:-1])
             self.target.append(dialog_tokens[1:-1] + [self.eos_token_id])
 
     def __getitem__(self, idx):
-        return torch.tensor([self.source[idx]]), torch.tensor([self.target[idx]])
+        return torch.tensor(self.source[idx]), torch.tensor(self.target[idx])
 
     def __len__(self):
         return len(self.source)

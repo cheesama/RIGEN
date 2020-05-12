@@ -15,6 +15,7 @@ from .model.models import DialogueTransformer
 import os, sys
 import multiprocessing
 import dill
+import numpy as np
 
 import torch
 import torch.nn as nn
@@ -43,7 +44,9 @@ class ResponseInteractiveGenerator(pl.LightningModule):
                 file_list.append(root + os.sep + each_file)
         file_list = sorted(file_list, key=lambda t:os.stat(t).st_mtime)
 
+        print ('preparing train dataset')
         self.train_dataset = DialogueDataset(file_path=file_list[self.current_epoch], session_col='ho_idnt_num', text_col='text', tokenize_fn=self.hparams.tokenize_fn)
+        print ('preparing val dataset')
         self.val_dataset = DialogueDataset(file_path=file_list[self.current_epoch+1], session_col='ho_idnt_num', text_col='text', tokenize_fn=self.hparams.tokenize_fn)
 
     def train_dataloader(self):
@@ -68,9 +71,9 @@ class ResponseInteractiveGenerator(pl.LightningModule):
         )
 
         return (
-            [intent_optimizer,],
+            [optimizer,],
             [
-                ReduceLROnPlateau(intent_optimizer, patience=1),
+                ReduceLROnPlateau(optimizer, patience=1),
             ],
         )
 
@@ -116,9 +119,9 @@ class ResponseInteractiveGenerator(pl.LightningModule):
             "val_loss": loss,
         }
 
-    def validation_end(self, outputs):
-        avg_loss = torch.stack([x["val_loss"] for x in outputs]).mean()
-        avg_acc = torch.stack([x["val_acc"] for x in outputs]).mean()
+    def validation_epoch_end(self, outputs):
+        avg_loss = np.mean([x["val_loss"] for x in outputs])
+        avg_acc = np.mean([x["val_acc"] for x in outputs])
 
         tensorboard_logs = {
             "val/loss": avg_loss,
@@ -133,3 +136,4 @@ class ResponseInteractiveGenerator(pl.LightningModule):
             "log": tensorboard_logs,
             "progress_bar": tensorboard_logs,
         }
+

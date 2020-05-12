@@ -12,14 +12,14 @@ def train(
     optimizer="Adam",
     optimizer_lr=1e-5,
     checkpoint_path=os.getcwd(),
-    tokenizer=ElectraTokenizer.from_pretrained("monologg/koelectra-small-discriminator")
+    tokenizer=ElectraTokenizer.from_pretrained("monologg/koelectra-small-discriminator"),
     #tokenize_fn=ElectraTokenizer.from_pretrained("monologg/koelectra-small-discriminator").convert_tokens_to_ids
     **kwargs
 ):
     """
     file_path: folder containing dialogue session data files are located
     """
-    max_epochs = 0
+    file_list = []
     for root, dir, files in os.walk(file_path):
         for each_file in files:
             file_list.append(root + os.sep + each_file)
@@ -40,7 +40,7 @@ def train(
     model_args["optimizer_lr"] = optimizer_lr
 
     #currently, only support KoELECTRA tokenizer
-    model_args["tokenize_fn"] = tokenizer.convert_tokens_to_ids
+    model_args["tokenize_fn"] = tokenizer.encode
     model_args["vocab_size"] = len(tokenizer.get_vocab())
 
     for key, value in kwargs.items():

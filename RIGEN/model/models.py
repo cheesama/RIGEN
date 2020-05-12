@@ -21,7 +21,7 @@ class DialogueTransformer(nn.Module):
         super(DialogueTransformer, self).__init__()
 
         self.vocab_embedding = nn.Embedding(vocab_size, d_model)
-        self.feature_embedding = nn.Embedding(d_model, vocab_size)
+        self.feature_embedding = nn.Linear(d_model, vocab_size)
         self.encoder = nn.TransformerEncoder(
             TransformerEncoderLayer(
                 d_model, nhead, dim_feedforward, dropout, activation
@@ -37,10 +37,8 @@ class DialogueTransformer(nn.Module):
 
     def forward(self, x):
         embedding = self.vocab_embedding(x)
-        embedding += self.position_embedding(torch.arange(x.size(1)).repeat(x.size(0), 1).type_as(x))
-
         src_mask = self._generate_square_subsequent_mask(x.size(1)).type_as(embedding)
 
-        feature = self.encoder(embedding.transpose(1, 0), src_mask=src_mask))  #(N,S,E) -> (S,N,E)
+        feature = self.encoder(embedding.transpose(1, 0), mask=src_mask)  #(N,S,E) -> (S,N,E)
 
         return self.feature_embedding(feature.transpose(0,1)) #(S,N,E) -> (N,S,E) -> (N,S,C)
