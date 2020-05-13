@@ -32,8 +32,6 @@ class DialogueDataset(torch.utils.data.Dataset):
         sep             : delimiter of data file(default: ',')
         tokenizer_fn    : tokenizer func(default: None(using KoELECTRA tokenizer))
         """
-        df = pd.read_csv(file_path, delimiter=sep, usecols=[session_col, text_col], encoding='utf-8')
-
         self.sep_token_id = sep_token_id
         self.eos_token_id = eos_token_id
 
@@ -45,6 +43,8 @@ class DialogueDataset(torch.utils.data.Dataset):
             self.tokenize_fn = tokenizer.convert_tokens_to_ids
         else:
             self.tokenize_fn = tokenize_fn
+
+        df = pd.read_csv(file_path, delimiter=sep, usecols=[session_col, text_col], encoding='utf-8')
 
         for name, group in tqdm(df.groupby(session_col), desc=f'generating session token dataset -> {file_path}'):
             dialog = list(group[text_col])

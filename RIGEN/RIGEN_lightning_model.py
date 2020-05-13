@@ -30,7 +30,6 @@ class ResponseInteractiveGenerator(pl.LightningModule):
         self.model = DialogueTransformer(vocab_size=self.hparams.vocab_size)
 
         self.batch_size = 1
-        self.optimizer = self.hparams.optimizer
         self.optimizer_lr = self.hparams.optimizer_lr
         self.loss_fn = nn.CrossEntropyLoss()
 
@@ -66,18 +65,16 @@ class ResponseInteractiveGenerator(pl.LightningModule):
         return val_loader
 
     def configure_optimizers(self):
-        optimizer = eval(
-            f"{self.optimizer}(self.parameters(), lr={self.optimizer_lr})"
-        )
+        optimizer = torch.optim.Adam(self.parameters(), lr=self.optimizer_lr)
 
-        return optimizer, ReduceLROnPlateau(optimizer, patience=1)
+        return [optimizer], [ReduceLROnPlateau(optimizer, patience=1)]
 
     def training_step(self, batch, batch_idx):
         self.model.train()
 
         source, target = batch
 
-        pred = self.forward(tokens)
+        pred = self.forward(source)
 
         acc = get_token_accuracy(
             target.cpu(),
@@ -89,7 +86,7 @@ class ResponseInteractiveGenerator(pl.LightningModule):
         }
 
         loss = self.loss_fn(pred.transpose(1, 2), target.long())
-        tensorboard_logs["train/loss"] = _loss
+        tensorboard_logs["train/loss"] = loss
         return {
             "loss": loss,
             "log": tensorboard_logs,
@@ -123,8 +120,8 @@ class ResponseInteractiveGenerator(pl.LightningModule):
             "val/acc": avg_acc,
         }
 
-        print ('### preparing next dataset ###')
-        self.prepare_data()
+        #print ('### preparing next dataset ###')
+        #self.prepare_data()
 
         return {
             "val_loss": avg_loss,
