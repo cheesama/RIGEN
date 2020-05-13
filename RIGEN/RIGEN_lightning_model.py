@@ -26,7 +26,6 @@ class ResponseInteractiveGenerator(pl.LightningModule):
         super().__init__()
 
         self.hparams = hparams
-        print (f'parameter setting: {self.hparams}')
 
         self.model = DialogueTransformer(vocab_size=self.hparams.vocab_size)
 
@@ -43,6 +42,8 @@ class ResponseInteractiveGenerator(pl.LightningModule):
             for each_file in files:
                 file_list.append(root + os.sep + each_file)
         self.file_list = sorted(file_list, key=lambda t:os.stat(t).st_mtime)
+
+        print (f'parameter setting: {self.hparams}')
 
         print ('preparing train dataset')
         self.train_dataset = DialogueDataset(file_path=file_list[self.current_epoch], session_col='ho_idnt_num', text_col='text', tokenize_fn=self.hparams.tokenize_fn)
