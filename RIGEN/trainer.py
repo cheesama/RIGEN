@@ -40,7 +40,7 @@ def train(
     model_args["optimizer_lr"] = optimizer_lr
 
     #currently, only support KoELECTRA tokenizer
-    model_args["tokenize_fn"] = tokenizer.encode
+    model_args["tokenizer"] = tokenizer
     model_args["vocab_size"] = len(tokenizer.get_vocab())
 
     for key, value in kwargs.items():

@@ -46,9 +46,9 @@ class ResponseInteractiveGenerator(pl.LightningModule):
         print (f'parameter setting: {self.hparams}')
 
         print ('preparing train dataset')
-        self.train_dataset = DialogueDataset(file_path=file_list[self.current_epoch], session_col='ho_idnt_num', text_col='text', tokenize_fn=self.hparams.tokenize_fn)
+        self.train_dataset = DialogueDataset(file_path=file_list[self.current_epoch], session_col='ho_idnt_num', text_col='text', tokenize_fn=self.hparams.tokenizer.encode)
         print ('preparing val dataset')
-        self.val_dataset = DialogueDataset(file_path=file_list[self.current_epoch+1], session_col='ho_idnt_num', text_col='text', tokenize_fn=self.hparams.tokenize_fn)
+        self.val_dataset = DialogueDataset(file_path=file_list[self.current_epoch+1], session_col='ho_idnt_num', text_col='text', tokenize_fn=self.hparams.tokenizer.encode)
 
         self.train_loader = DataLoader(self.train_dataset, batch_size=self.batch_size, num_workers=multiprocessing.cpu_count()) 
         self.val_loader = DataLoader(self.val_dataset, batch_size=self.batch_size, num_workers=multiprocessing.cpu_count()) 
