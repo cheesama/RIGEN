@@ -26,6 +26,7 @@ class ResponseInteractiveGenerator(pl.LightningModule):
         super().__init__()
 
         self.hparams = hparams
+        print (f'parameter setting: {self.hparams}')
 
         self.model = DialogueTransformer(vocab_size=self.hparams.vocab_size)
 
