@@ -57,6 +57,9 @@ class DialogueDataset(torch.utils.data.Dataset):
             self.source.append(dialog_tokens[:-1])
             self.target.append(dialog_tokens[1:-1] + [self.eos_token_id])
 
+            #if len(self.source) > 10:
+            #    break
+
     def __getitem__(self, idx):
         return torch.tensor(self.source[idx]), torch.tensor(self.target[idx])
 

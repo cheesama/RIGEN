@@ -41,28 +41,33 @@ class ResponseInteractiveGenerator(pl.LightningModule):
         for root, dir, files in os.walk(self.hparams.file_path):
             for each_file in files:
                 file_list.append(root + os.sep + each_file)
-        file_list = sorted(file_list, key=lambda t:os.stat(t).st_mtime)
+        self.file_list = sorted(file_list, key=lambda t:os.stat(t).st_mtime)
 
         print ('preparing train dataset')
         self.train_dataset = DialogueDataset(file_path=file_list[self.current_epoch], session_col='ho_idnt_num', text_col='text', tokenize_fn=self.hparams.tokenize_fn)
         print ('preparing val dataset')
         self.val_dataset = DialogueDataset(file_path=file_list[self.current_epoch+1], session_col='ho_idnt_num', text_col='text', tokenize_fn=self.hparams.tokenize_fn)
 
+        self.train_loader = DataLoader(self.train_dataset, batch_size=self.batch_size, num_workers=multiprocessing.cpu_count()) 
+        self.val_loader = DataLoader(self.val_dataset, batch_size=self.batch_size, num_workers=multiprocessing.cpu_count()) 
+
+    def prepare_next_data(self, epoch: int):
+        if epoch > 0:
+            print ('### preparing next epoch dataset ###')
+
+            print ('preparing train dataset')
+            self.train_dataset = DialogueDataset(file_path=self.file_list[epoch], session_col='ho_idnt_num', text_col='text', tokenize_fn=self.hparams.tokenize_fn)
+            print ('preparing val dataset')
+            self.val_dataset = DialogueDataset(file_path=self.file_list[epoch+1], session_col='ho_idnt_num', text_col='text', tokenize_fn=self.hparams.tokenize_fn)
+
+            self.train_loader = DataLoader(self.train_dataset, batch_size=self.batch_size, num_workers=multiprocessing.cpu_count()) 
+            self.val_loader = DataLoader(self.val_dataset, batch_size=self.batch_size, num_workers=multiprocessing.cpu_count()) 
+
     def train_dataloader(self):
-        train_loader = DataLoader(
-            self.train_dataset,
-            batch_size=self.batch_size,
-            num_workers=multiprocessing.cpu_count(),
-        )
-        return train_loader
+        return self.train_loader
 
     def val_dataloader(self):
-        val_loader = DataLoader(
-            self.val_dataset,
-            batch_size=self.batch_size,
-            num_workers=multiprocessing.cpu_count(),
-        )
-        return val_loader
+        return self.val_loader
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.optimizer_lr)
@@ -120,8 +125,7 @@ class ResponseInteractiveGenerator(pl.LightningModule):
             "val/acc": avg_acc,
         }
 
-        #print ('### preparing next dataset ###')
-        #self.prepare_data()
+        self.prepare_next_data(self.current_epoch)
 
         return {
             "val_loss": avg_loss,
