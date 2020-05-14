@@ -118,7 +118,7 @@ class ResponseInteractiveGenerator(pl.LightningModule):
             "val_acc": torch.Tensor([acc]),
         }
 
-    def validation_epoch_end(self, outputs):
+    def validation_end(self, outputs):
         print ('validation output')
         print (outputs)
 
