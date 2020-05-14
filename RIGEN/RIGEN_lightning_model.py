@@ -114,13 +114,13 @@ class ResponseInteractiveGenerator(pl.LightningModule):
         loss = self.loss_fn(pred.transpose(1, 2), target.long())
 
         return {
-            "val_acc": acc,
+            "val_acc": torch.Tensor([acc]),
             "val_loss": loss,
         }
 
     def validation_epoch_end(self, outputs):
-        avg_loss = np.mean([x["val_loss"] for x in outputs])
-        avg_acc = np.mean([x["val_acc"] for x in outputs])
+        avg_loss = torch.stack([x["val_loss"] for x in outputs]).mean()
+        avg_acc = torch.stack([x["val_acc"] for x in outputs]).mean()
 
         tensorboard_logs = {
             "val/loss": avg_loss,
