@@ -10,8 +10,9 @@ import torch
 def train(
     file_path,
     optimizer_lr=1e-5, #default optimizer -> adam
-    checkpoint_path=os.getcwd(),
+    max_seq_len=512,
     tokenizer=ElectraTokenizer.from_pretrained("monologg/koelectra-small-discriminator"),
+    checkpoint_path=os.getcwd(),
     **kwargs
 ):
     """
@@ -37,6 +38,7 @@ def train(
     # training args
     model_args["max_epochs"] = max_epochs
     model_args["file_path"] = file_path
+    model_args["max_seq_len"] = max_seq_len
     model_args["optimizer_lr"] = optimizer_lr
 
     #currently, only support KoELECTRA tokenizer
