@@ -4,6 +4,7 @@ from transformers import ElectraTokenizer
 import torch
 import pandas as pd
 
+
 class DialogueDataset(torch.utils.data.Dataset):
     """
     Dialogue dataset sorted by session_id & sequence id
@@ -21,59 +22,69 @@ class DialogueDataset(torch.utils.data.Dataset):
         source_tensors: Tensor([[tokens of '안녕하세요', SEP, ... ],]) 
         target_tensors: One windows left shifted Tensor([[..., EOS(CLS)],])
     """
-    def __init__(self, file_path, session_col, text_col, sep_token_id=3, eos_token_id=2, sep='\t', tokenize_fn=None):
+
+    def __init__(
+        self,
+        file_path,
+        tokenize_fn,
+        session_col: str,
+        text_col: str,
+        seq_len: int,
+        sep_token_id: int,
+        pad_token_id: int,
+        sep="\t",
+    ):
         """
         file_path       : dialogue file path
+        tokenizer_fn    : tokenizer func
         session_col     : session indicated column name
         text_col        : text indicated column name
-        sep_token_id    : SEP token indicated id(default: 3, KoELECTRA based)
-        eos_token_id    : EOS token indicated id(default: 2, KoELECTRA based(it does not contain BOS
-        token basically, replace CLS token instead))
+        sep_token_id    : SEP token id which seperate talker
+        pad_token_id    : PAD token id which set padding
         sep             : delimiter of data file(default: ',')
-        tokenizer_fn    : tokenizer func(default: None(using KoELECTRA tokenizer))
         """
         self.sep_token_id = sep_token_id
-        self.eos_token_id = eos_token_id
+        self.pad_token_id = pad_token_id
+        self.seq_len = seq_len
 
         self.source = []
         self.target = []
 
-        if tokenize_fn is None:
-            tokenizer = ElectraTokenizer.from_pretrained('monologg/koelectra-small-discriminator')
-            self.tokenize_fn = tokenizer.convert_tokens_to_ids
-        else:
-            self.tokenize_fn = tokenize_fn
+        self.tokenize_fn = tokenize_fn
 
-        df = pd.read_csv(file_path, delimiter=sep, usecols=[session_col, text_col], encoding='utf-8')
+        df = pd.read_csv(
+            file_path, delimiter=sep, usecols=[session_col, text_col], encoding="utf-8"
+        )
 
-        for name, group in tqdm(df.groupby(session_col), desc=f'generating session token dataset -> {file_path}'):
+        for name, group in tqdm(
+            df.groupby(session_col),
+            desc=f"generating session token dataset -> {file_path}",
+        ):
             dialog = list(group[text_col])
             dialog_tokens = []
 
             for utterance in dialog:
                 dialog_tokens += self.tokenize_fn(str(utterance))
-                dialog_tokens += [self.sep_token_id]
 
-            self.source.append(dialog_tokens[:-1])
-            self.target.append(dialog_tokens[1:-1] + [self.eos_token_id])
+            if len(dialog_tokens) < self.seq_len:
+                self.source.append(
+                    dialog_tokens
+                    + [self.pad_token_id] * (self.seq_len - len(dialog_tokens))
+                )
+                self.target.append(
+                    dialog_tokens[1:]
+                    + [self.pad_token_id] * (self.seq_len - len(dialog_tokens[1:]))
+                )
 
-            #if len(self.source) > 10:
-            #    break
+            else:
+                self.source.append(dialog_tokens[: self.seq_len])
+                self.target.append(dialog_tokens[1 : self.seq_len + 1])
+
+            if len(self.source) > 10:
+                break
 
     def __getitem__(self, idx):
         return torch.tensor(self.source[idx]), torch.tensor(self.target[idx])
 
     def __len__(self):
         return len(self.source)
-
-
-
-                
-                
-        
-
-
-
-        
-
-

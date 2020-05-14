@@ -21,15 +21,20 @@ import torch
 import torch.nn as nn
 import pytorch_lightning as pl
 
+
 class ResponseInteractiveGenerator(pl.LightningModule):
     def __init__(self, hparams):
         super().__init__()
 
         self.hparams = hparams
 
-        self.model = DialogueTransformer(vocab_size=self.hparams.vocab_size)
+        self.model = DialogueTransformer(
+            vocab_size=self.hparams.vocab_size,
+            seq_len=self.hparams.seq_len,
+            pad_token_id=self.hparams.pad_token_id,
+        )
 
-        self.batch_size = 1
+        self.batch_size = self.hparams.batch_size
         self.optimizer_lr = self.hparams.optimizer_lr
         self.loss_fn = nn.CrossEntropyLoss()
 
@@ -41,29 +46,77 @@ class ResponseInteractiveGenerator(pl.LightningModule):
         for root, dir, files in os.walk(self.hparams.file_path):
             for each_file in files:
                 file_list.append(root + os.sep + each_file)
-        self.file_list = sorted(file_list, key=lambda t:os.stat(t).st_mtime)
+        self.file_list = sorted(file_list, key=lambda t: os.stat(t).st_mtime)
 
-        print (f'parameter setting: {self.hparams}')
+        print(f"parameter setting: {self.hparams}")
 
-        print ('preparing train dataset')
-        self.train_dataset = DialogueDataset(file_path=file_list[self.current_epoch], session_col='ho_idnt_num', text_col='text', tokenize_fn=self.hparams.tokenizer.encode)
-        print ('preparing val dataset')
-        self.val_dataset = DialogueDataset(file_path=file_list[self.current_epoch+1], session_col='ho_idnt_num', text_col='text', tokenize_fn=self.hparams.tokenizer.encode)
+        print("preparing train dataset")
+        self.train_dataset = DialogueDataset(
+            file_path=self.file_list[self.current_epoch],
+            session_col="ho_idnt_num",
+            text_col="text",
+            seq_len=self.hparams.seq_len,
+            tokenize_fn=self.hparams.tokenizer.encode,
+            sep_token_id=self.hparams.tokenizer.sep_token_id,
+            pad_token_id=self.hparams.tokenizer.pad_token_id,
+        )
+        print("preparing val dataset")
+        self.val_dataset = DialogueDataset(
+            file_path=self.file_list[self.current_epoch + 1],
+            session_col="ho_idnt_num",
+            text_col="text",
+            seq_len=self.hparams.seq_len,
+            tokenize_fn=self.hparams.tokenizer.encode,
+            sep_token_id=self.hparams.tokenizer.sep_token_id,
+            pad_token_id=self.hparams.tokenizer.pad_token_id,
+        )
 
-        self.train_loader = DataLoader(self.train_dataset, batch_size=self.batch_size, num_workers=multiprocessing.cpu_count()) 
-        self.val_loader = DataLoader(self.val_dataset, batch_size=self.batch_size, num_workers=multiprocessing.cpu_count()) 
+        self.train_loader = DataLoader(
+            self.train_dataset,
+            batch_size=self.batch_size,
+            num_workers=multiprocessing.cpu_count(),
+        )
+        self.val_loader = DataLoader(
+            self.val_dataset,
+            batch_size=self.batch_size,
+            num_workers=multiprocessing.cpu_count(),
+        )
 
     def prepare_next_data(self, epoch: int):
         if epoch > 0:
-            print ('### preparing next epoch dataset ###')
+            print("### preparing next epoch dataset ###")
 
-            print ('preparing train dataset')
-            self.train_dataset = DialogueDataset(file_path=self.file_list[epoch], session_col='ho_idnt_num', text_col='text', tokenize_fn=self.hparams.tokenize_fn)
-            print ('preparing val dataset')
-            self.val_dataset = DialogueDataset(file_path=self.file_list[epoch+1], session_col='ho_idnt_num', text_col='text', tokenize_fn=self.hparams.tokenize_fn)
+        print("preparing train dataset")
+        self.train_dataset = DialogueDataset(
+            file_path=self.file_list[self.current_epoch],
+            session_col="ho_idnt_num",
+            text_col="text",
+            seq_len=self.hparams.seq_len,
+            tokenize_fn=self.hparams.tokenizer.encode,
+            sep_token_id=self.hparams.tokenizer.sep_token_id,
+            pad_token_id=self.hparams.tokenizer.pad_token_id,
+        )
+        print("preparing val dataset")
+        self.val_dataset = DialogueDataset(
+            file_path=self.file_list[self.current_epoch + 1],
+            session_col="ho_idnt_num",
+            text_col="text",
+            seq_len=self.hparams.seq_len,
+            tokenize_fn=self.hparams.tokenizer.encode,
+            sep_token_id=self.hparams.tokenizer.sep_token_id,
+            pad_token_id=self.hparams.tokenizer.pad_token_id,
+        )
 
-            self.train_loader = DataLoader(self.train_dataset, batch_size=self.batch_size, num_workers=multiprocessing.cpu_count()) 
-            self.val_loader = DataLoader(self.val_dataset, batch_size=self.batch_size, num_workers=multiprocessing.cpu_count()) 
+        self.train_loader = DataLoader(
+            self.train_dataset,
+            batch_size=self.batch_size,
+            num_workers=multiprocessing.cpu_count(),
+        )
+        self.val_loader = DataLoader(
+            self.val_dataset,
+            batch_size=self.batch_size,
+            num_workers=multiprocessing.cpu_count(),
+        )
 
     def train_dataloader(self):
         return self.train_loader
@@ -83,10 +136,7 @@ class ResponseInteractiveGenerator(pl.LightningModule):
 
         pred = self.forward(source)
 
-        acc = get_token_accuracy(
-            target.cpu(),
-            pred.max(2)[1].cpu(),
-        )[0]
+        acc = get_token_accuracy(target.cpu(), pred.max(2)[1].cpu(),)[0]
 
         tensorboard_logs = {
             "train/acc": acc,
@@ -106,10 +156,7 @@ class ResponseInteractiveGenerator(pl.LightningModule):
 
         pred = self.forward(source)
 
-        acc = get_token_accuracy(
-            target.cpu(),
-            pred.max(2)[1].cpu(),
-        )[0]
+        acc = get_token_accuracy(target.cpu(), pred.max(2)[1].cpu(),)[0]
 
         loss = self.loss_fn(pred.transpose(1, 2), target.long())
 
@@ -135,4 +182,3 @@ class ResponseInteractiveGenerator(pl.LightningModule):
             "log": tensorboard_logs,
             "progress_bar": tensorboard_logs,
         }
-

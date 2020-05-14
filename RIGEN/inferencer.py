@@ -9,6 +9,7 @@ model = None
 intent_dict = {}
 entity_dict = {}
 
+
 class Inferencer:
     def __init__(self, checkpoint_path: str):
         self.model = ResponseInteractiveGenerator.load_from_checkpoint(checkpoint_path)
@@ -22,4 +23,3 @@ class Inferencer:
 
         tokens = self.model.hparams.tokenize_fn(text)
         result = self.model.forward(tokens.unsqueeze(0))
-
