@@ -80,8 +80,8 @@ class DialogueDataset(torch.utils.data.Dataset):
                 self.source.append(dialog_tokens[: self.seq_len])
                 self.target.append(dialog_tokens[1 : self.seq_len + 1])
 
-            if len(self.source) > 10:
-                break
+            #if len(self.source) > 10:
+            #    break
 
     def __getitem__(self, idx):
         return torch.tensor(self.source[idx]), torch.tensor(self.target[idx])
