@@ -35,13 +35,10 @@ def train(
         # distributed_backend='ddp2'
         distributed_backend = "horovod"
 
-    if distributed_backend == "horovod":
-        gpu_num = 1
-
     trainer = Trainer(
         default_root_dir=checkpoint_path,
         max_epochs=max_epochs,
-        gpus=gpu_num,
+        #gpus=gpu_num,
         distributed_backend=distributed_backend,
     )
 
