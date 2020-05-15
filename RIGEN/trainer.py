@@ -38,7 +38,7 @@ def train(
         trainer = Trainer(
             default_root_dir=checkpoint_path,
             max_epochs=max_epochs,
-            gpus=None,
+            #gpus=None,
             distributed_backend=distributed_backend,
         )
     else:
