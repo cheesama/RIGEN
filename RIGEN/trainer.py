@@ -35,12 +35,19 @@ def train(
         # distributed_backend='ddp2'
         distributed_backend = "horovod"
 
-    trainer = Trainer(
-        default_root_dir=checkpoint_path,
-        max_epochs=max_epochs,
-        #gpus=gpu_num,
-        distributed_backend=distributed_backend,
-    )
+        trainer = Trainer(
+            default_root_dir=checkpoint_path,
+            max_epochs=max_epochs,
+            gpus=None,
+            distributed_backend=distributed_backend,
+        )
+    else:
+        trainer = Trainer(
+            default_root_dir=checkpoint_path,
+            max_epochs=max_epochs,
+            gpus=gpu_num,
+        )
+
 
     model_args = {}
 
