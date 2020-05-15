@@ -31,23 +31,16 @@ def train(
     gpu_num = torch.cuda.device_count()
     distributed_backend = None
     if gpu_num > 1:
-        # distributed_backend='ddp'
-        # distributed_backend='ddp2'
-        distributed_backend = "horovod"
+        #distributed_backend='dp'
+        distributed_backend='ddp'
+        #distributed_backend='ddp2'
 
-        trainer = Trainer(
-            default_root_dir=checkpoint_path,
-            max_epochs=max_epochs,
-            #gpus=None,
-            distributed_backend=distributed_backend,
-        )
-    else:
-        trainer = Trainer(
-            default_root_dir=checkpoint_path,
-            max_epochs=max_epochs,
-            gpus=gpu_num,
-        )
-
+    trainer = Trainer(
+        default_root_dir=checkpoint_path,
+        max_epochs=max_epochs,
+        gpus=gpu_num,
+        distributed_backend=distributed_backend,
+    )
 
     model_args = {}
 
