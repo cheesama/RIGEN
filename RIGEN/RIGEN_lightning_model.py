@@ -82,7 +82,9 @@ class ResponseInteractiveGenerator(pl.LightningModule):
         )
 
     def prepare_next_data(self, epoch: int):
-        if epoch > 0:
+        print (f'current epoch: {epoch}')
+
+        if epoch > 1:
             print("### preparing next epoch dataset ###")
 
         print("preparing train dataset")
