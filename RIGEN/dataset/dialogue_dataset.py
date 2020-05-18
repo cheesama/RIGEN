@@ -66,7 +66,7 @@ class DialogueDataset(torch.utils.data.Dataset):
             for utterance in dialog:
                 dialog_tokens += self.tokenize_fn(str(utterance))
 
-            if len(dialog_tokens) < self.seq_len:
+            if len(dialog_tokens) < self.seq_len + 1:
                 self.source.append(
                     dialog_tokens
                     + [self.pad_token_id] * (self.seq_len - len(dialog_tokens))
