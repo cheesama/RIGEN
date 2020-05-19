@@ -64,7 +64,8 @@ class DialogueDataset(torch.utils.data.Dataset):
             dialog_tokens = []
 
             for utterance in dialog:
-                dialog_tokens += self.tokenize_fn(str(utterance))
+                #based on KoELETRA tokenizer, ignore [CLS] token
+                dialog_tokens += self.tokenize_fn(str(utterance))[1:]
 
             if len(dialog_tokens) < self.seq_len + 1:
                 self.source.append(

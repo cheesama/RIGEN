@@ -21,5 +21,6 @@ class Inferencer:
                 "model is not loaded, first call load_model(checkpoint_path)"
             )
 
-        tokens = self.model.hparams.tokenize_fn(text)
+        #KoELECTRA tokenizer based, ignore [CLS] token
+        tokens = self.model.hparams.tokenize_fn(text)[1:] 
         result = self.model.forward(tokens.unsqueeze(0))

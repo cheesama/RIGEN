@@ -35,7 +35,7 @@ class ResponseInteractiveGenerator(pl.LightningModule):
 
         self.batch_size = self.hparams.batch_size
         self.optimizer_lr = self.hparams.optimizer_lr
-        self.loss_fn = nn.CrossEntropyLoss()
+        self.loss_fn = nn.CrossEntropyLoss(ignore_index=self.hparams.pad_token_id)
 
     def forward(self, x):
         return self.model(x)
